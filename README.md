@@ -1,12 +1,15 @@
 # LinkPlease — High-Reliability Instagram DM Engine
 
-Production-grade, highly reliable microservice automating direct messages (DMs) when Instagram comments match creator-configured keyword rules. Designed to operate safely against hostile, unreliable upstream APIs featuring rate limits, network partitions, event redeliveries, accepted-then-failed statuses, and comment deletions.
+Video Walkthrough & Demo
 
----
+**Loom Video Demo:** https://www.loom.com/share/abe9d28c090649fab381d6ddcff85691
+**Direct Link:** [Watch Loom Video Walkthrough](https://www.loom.com/share/abe9d28c090649fab381d6ddcff85691)
 
-## Architecture Overview
+Watch the comprehensive video walkthrough demonstrating the end-to-end architecture, failure handling, live webhook ingestion, token-bucket rate limiting, 500-event stress testing, and background reconciliation.
 
-```
+Architecture Overview
+
+
                         Incoming Webhook (POST /webhook)
                                       │
                                       ▼
