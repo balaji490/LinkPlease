@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LinkPlease — DM Automation</title>
+  <meta name="description" content="Keyword-to-DM automation platform for Instagram creators. Powered by SQLite.">
+  <link rel="icon" type="image/jpeg" href="/static/favicon.jpg">
+  <link rel="apple-touch-icon" href="/static/favicon.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ===== TOKENS ===== */
+    :root {
+      --bg:       #F5F6FA;
+      --bg2:      #ECEEF6;
+      --bg3:      #E2E5F0;
+      --white:    #FFFFFF;
+      --border:   #DDE0EE;
+      --border2:  #C8CCE2;
+      --txt1:     #111827;
+      --txt2:     #374151;
+      --txt3:     #6B7280;
+      --txt4:     #9CA3AF;
+
+      --indigo:   #4F46E5;
+      --violet:   #7C3AED;
+      --rose:     #E11D48;
+      --grad:     linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+      --grad-rose:linear-gradient(135deg, #7C3AED 0%, #E11D48 100%);
+
+      --green:    #059669; --green-bg: #ECFDF5; --green-b: rgba(5,150,105,.18);
+      --amber:    #D97706; --amber-bg: #FFFBEB; --amber-b: rgba(217,119,6,.18);
+      --red:      #DC2626; --red-bg:   #FEF2F2; --red-b:   rgba(220,38,38,.18);
+      --purple:   #7C3AED; --purple-bg:#F5F3FF; --purple-b:rgba(124,58,237,.18);
+      --blue:     #2563EB; --blue-bg:  #EFF6FF; --blue-b:  rgba(37,99,235,.18);
+
+      --shadow-xs: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+      --shadow-sm: 0 2px 8px rgba(79,70,229,.07), 0 1px 3px rgba(0,0,0,.05);
+      --shadow-md: 0 4px 18px rgba(79,70,229,.11), 0 2px 6px rgba(0,0,0,.06);
+      --shadow-lg: 0 8px 36px rgba(79,70,229,.15), 0 3px 12px rgba(0,0,0,.08);
+
+      --r:   14px;
+      --r-s: 9px;
+      --r-x: 6px;
+      --r-p: 9999px;
+      --transition: .2s cubic-bezier(.4,0,.2,1);
+    }
+
+    /* ===== RESET ===== */
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html { scroll-behavior:smooth; -webkit-font-smoothing:antialiased; }
+    body { font-family:'Inter', system-ui, sans-serif; background:var(--bg); color:var(--txt1); min-height:100vh; }
+    button { font-family:inherit; cursor:pointer; border:none; background:none; }
+    input, textarea { font-family:inherit; }
+
+    /* ===== SCROLLBAR ===== */
+    ::-webkit-scrollbar { width:5px; }
+    ::-webkit-scrollbar-track { background:var(--bg2); }
+    ::-webkit-scrollbar-thumb { background:var(--indigo); border-radius:5px; opacity:.5; }
+
+    /* ===== LAYOUT ===== */
+    .page { display:flex; min-height:100vh; }
+
+    /* ===== SIDEBAR ===== */
+    .sidebar {
+      width:240px; flex-shrink:0;
+      background:var(--white);
+      border-right:1px solid var(--border);
+      display:flex; flex-direction:column;
+      position:sticky; top:0; height:100vh; overflow-y:auto;
+      box-shadow:var(--shadow-xs);
+      z-index:100;
+    }
+    .sidebar-logo {
+      padding:20px 20px 16px;
+      display:flex; align-items:center; gap:11px;
+      border-bottom:1px solid var(--border);
+    }
+    .sidebar-logo img {
+      width:36px; height:36px; border-radius:9px; object-fit:cover;
+      box-shadow:0 3px 10px rgba(79,70,229,.3);
+    }
+    .sidebar-logo-text { font-size:17px; font-weight:800; letter-spacing:-.4px; color:var(--txt1); }
+    .sidebar-logo-text span { color:var(--indigo); }
+    .sidebar-tag {
+      font-size:10px; font-weight:700; letter-spacing:.7px; text-transform:uppercase;
+      color:var(--violet); background:var(--purple-bg); border:1px solid var(--purple-b);
+      padding:2px 7px; border-radius:var(--r-p); margin-top:2px; align-self:flex-start;
+    }
+    .nav-section { padding:16px 12px 8px; }
+    .nav-section-label {
+      font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase;
+      color:var(--txt4); padding:0 8px; margin-bottom:6px;
+    }
+    .nav-item {
+      display:flex; align-items:center; gap:10px;
+      padding:9px 12px; border-radius:var(--r-s);
+      font-size:13px; font-weight:600; color:var(--txt2);
+      transition:all var(--transition); cursor:pointer; text-decoration:none; margin-bottom:2px;
+    }
+    .nav-item:hover { background:var(--bg2); color:var(--txt1); }
+    .nav-item.active { background:var(--purple-bg); color:var(--indigo); }
+    .nav-item svg { width:16px; height:16px; flex-shrink:0; opacity:.7; }
+    .nav-item.active svg { opacity:1; }
+    .sidebar-bottom {
+      margin-top:auto; padding:16px;
+      border-top:1px solid var(--border);
+    }
+    .status-row {
+      display:flex; align-items:center; gap:8px;
+      padding:10px 12px; border-radius:var(--r-s);
+      background:var(--green-bg); border:1px solid var(--green-b);
+    }
+    .status-dot {
+      width:8px; height:8px; border-radius:50%;
+      background:var(--green); box-shadow:0 0 0 2px rgba(5,150,105,.2);
+      animation:pulse 2s ease-in-out infinite;
+      flex-shrink:0;
+    }
+    @keyframes pulse { 0%,100%{box-shadow:0 0 0 2px rgba(5,150,105,.2)} 50%{box-shadow:0 0 0 5px rgba(5,150,105,.08)} }
+    .status-txt { font-size:12px; font-weight:700; color:var(--green); }
+
+    /* ===== MAIN CONTENT ===== */
+    .main { flex:1; overflow:hidden; }
+
+    /* ===== TOPBAR ===== */
+    .topbar {
+      background:var(--white); border-bottom:1px solid var(--border);
+      padding:0 28px; height:60px;
+      display:flex; align-items:center; justify-content:space-between;
+      box-shadow:var(--shadow-xs);
+    }
+    .topbar-left h1 { font-size:16px; font-weight:700; color:var(--txt1); }
+    .topbar-left p { font-size:12px; color:var(--txt3); margin-top:1px; }
+    .topbar-right { display:flex; align-items:center; gap:10px; }
+    .topbar-time { font-size:12px; color:var(--txt3); font-family:'JetBrains Mono',monospace; }
+    .btn-api {
+      padding:7px 16px; border-radius:var(--r-s);
+      background:var(--grad); color:#fff; font-size:13px; font-weight:600;
+      box-shadow:0 3px 10px rgba(79,70,229,.28);
+      transition:all var(--transition); text-decoration:none; display:inline-block;
+    }
+    .btn-api:hover { transform:translateY(-1px); box-shadow:0 5px 16px rgba(79,70,229,.38); }
+    .refresh-label { font-size:12px; color:var(--txt4); }
+
+    /* ===== BODY WRAP ===== */
+    .content { padding:24px 28px; }
+
+    /* ===== STATS ===== */
+    .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:24px; }
+    @media(max-width:1000px) { .stats-grid { grid-template-columns:repeat(2,1fr); } }
+
+    .stat-card {
+      background:var(--white); border:1px solid var(--border);
+      border-radius:var(--r); padding:20px;
+      box-shadow:var(--shadow-xs);
+      transition:all var(--transition);
+      position:relative; overflow:hidden;
+    }
+    .stat-card::after {
+      content:''; position:absolute; left:0; top:0; bottom:0; width:3px;
+      border-radius:3px 0 0 3px;
+    }
+    .sc-green::after { background:var(--green); }
+    .sc-amber::after { background:var(--amber); }
+    .sc-purple::after { background:var(--purple); }
+    .sc-red::after    { background:var(--red); }
+    .stat-card:hover { transform:translateY(-2px); box-shadow:var(--shadow-md); }
+
+    .stat-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+    .stat-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.7px; color:var(--txt3); }
+    .stat-icon-box {
+      width:34px; height:34px; border-radius:9px;
+      display:flex; align-items:center; justify-content:center;
+    }
+    .stat-icon-box svg { width:17px; height:17px; }
+    .sc-green .stat-icon-box { background:var(--green-bg); color:var(--green); }
+    .sc-amber .stat-icon-box { background:var(--amber-bg); color:var(--amber); }
+    .sc-purple .stat-icon-box { background:var(--purple-bg); color:var(--purple); }
+    .sc-red .stat-icon-box    { background:var(--red-bg);    color:var(--red); }
+
+    .stat-value { font-size:36px; font-weight:900; letter-spacing:-2px; font-family:'JetBrains Mono',monospace; line-height:1; }
+    .sc-green .stat-value  { color:var(--green); }
+    .sc-amber .stat-value  { color:var(--amber); }
+    .sc-purple .stat-value { color:var(--purple); }
+    .sc-red .stat-value    { color:var(--red); }
+    .stat-desc { font-size:11px; color:var(--txt4); margin-top:6px; }
+    .stat-bar { height:4px; background:var(--bg3); border-radius:4px; margin-top:14px; overflow:hidden; }
+    .stat-bar-fill { height:100%; border-radius:4px; transition:width .7s cubic-bezier(.4,0,.2,1); }
+    .sc-green .stat-bar-fill  { background:linear-gradient(90deg,#059669,#34d399); }
+    .sc-amber .stat-bar-fill  { background:linear-gradient(90deg,#d97706,#fbbf24); }
+    .sc-purple .stat-bar-fill { background:linear-gradient(90deg,#7c3aed,#a78bfa); }
+    .sc-red .stat-bar-fill    { background:linear-gradient(90deg,#dc2626,#f87171); }
+
+    /* ===== WORK GRID ===== */
+    .work-grid { display:grid; grid-template-columns:360px 1fr; gap:18px; }
+    @media(max-width:1100px) { .work-grid { grid-template-columns:1fr; } }
+
+    /* ===== CARD ===== */
+    .card {
+      background:var(--white); border:1px solid var(--border);
+      border-radius:var(--r); box-shadow:var(--shadow-xs);
+      overflow:visible; margin-bottom:18px;
+    }
+    .card:last-child { margin-bottom:0; }
+    .card-head {
+      padding:14px 18px; border-bottom:1px solid var(--border);
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .card-title { font-size:13px; font-weight:700; color:var(--txt1); display:flex; align-items:center; gap:8px; }
+    .card-icon-wrap {
+      width:26px; height:26px; border-radius:7px;
+      background:var(--grad); display:flex; align-items:center; justify-content:center;
+      box-shadow:0 2px 8px rgba(79,70,229,.28);
+    }
+    .card-icon-wrap svg { width:13px; height:13px; color:#fff; }
+    .card-body { padding:18px; }
+
+    /* ===== FORM ===== */
+    .field { margin-bottom:14px; }
+    .field label { display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.7px; color:var(--txt3); margin-bottom:7px; }
+    .field input, .field textarea {
+      width:100%; background:var(--bg); border:1px solid var(--border);
+      border-radius:var(--r-s); padding:11px 13px;
+      font-size:14px; color:var(--txt1);
+      transition:all var(--transition); resize:vertical;
+      outline:none;
+    }
+    .field input::placeholder, .field textarea::placeholder { color:var(--txt4); }
+    .field input:focus, .field textarea:focus {
+      border-color:var(--indigo); background:var(--white);
+      box-shadow:0 0 0 3px rgba(79,70,229,.1);
+    }
+
+    /* ===== BUTTONS ===== */
+    .btn {
+      display:inline-flex; align-items:center; justify-content:center; gap:7px;
+      padding:10px 18px; border-radius:var(--r-s); font-size:13px; font-weight:700;
+      transition:all var(--transition); cursor:pointer; outline:none; border:none;
+    }
+    .btn-full { width:100%; }
+    .btn-primary {
+      background:var(--grad); color:#fff;
+      box-shadow:0 3px 12px rgba(79,70,229,.3);
+    }
+    .btn-primary:hover { transform:translateY(-1px); box-shadow:0 5px 18px rgba(79,70,229,.4); }
+    .btn-primary:active { transform:translateY(0); }
+    .btn-ghost { background:var(--bg2); border:1px solid var(--border); color:var(--txt2); font-size:12px; padding:6px 13px; border-radius:var(--r-x); }
+    .btn-ghost:hover { background:var(--bg3); border-color:var(--indigo); color:var(--indigo); }
+    .btn svg { width:14px; height:14px; }
+
+    /* ===== RULES LIST ===== */
+    .rules-list { display:flex; flex-direction:column; gap:8px; max-height:220px; overflow-y:auto; margin-top:14px; }
+    .rule-item {
+      display:flex; align-items:center; gap:10px;
+      background:var(--bg); border:1px solid var(--border);
+      border-radius:var(--r-s); padding:10px 13px;
+      transition:all var(--transition);
+    }
+    .rule-item:hover { border-color:var(--indigo); background:var(--white); }
+    .rule-kw {
+      background:var(--purple-bg); border:1px solid var(--purple-b);
+      color:var(--purple); padding:3px 9px; border-radius:var(--r-x);
+      font-size:11px; font-weight:700; font-family:'JetBrains Mono',monospace;
+      letter-spacing:.3px; white-space:nowrap; flex-shrink:0;
+    }
+    .rule-msg { font-size:13px; color:var(--txt2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; }
+    .rule-empty { text-align:center; padding:20px 0; color:var(--txt4); font-size:13px; }
+
+    /* ===== DIVIDER LABEL ===== */
+    .divider { display:flex; align-items:center; gap:8px; margin:16px 0 12px; }
+    .divider span { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--txt4); white-space:nowrap; }
+    .divider hr { flex:1; border:none; border-top:1px solid var(--border); }
+
+    /* ===== SIMULATOR ===== */
+    .sim-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .sim-btn {
+      background:var(--bg); border:1px solid var(--border);
+      border-radius:var(--r-s); padding:13px 14px; text-align:left;
+      transition:all var(--transition); color:var(--txt1); cursor:pointer;
+    }
+    .sim-btn:hover { border-color:var(--indigo); background:var(--white); box-shadow:var(--shadow-sm); transform:translateY(-1px); }
+    .sim-btn-title { font-size:12px; font-weight:700; color:var(--txt1); margin-bottom:4px; }
+    .sim-btn-desc { font-size:11px; color:var(--txt3); line-height:1.5; }
+
+    /* ===== HOW TO USE ===== */
+    .how-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:22px; }
+    @media(max-width:900px) { .how-grid { grid-template-columns:repeat(2,1fr); } }
+    .how-card {
+      background:var(--white); border:1px solid var(--border);
+      border-radius:var(--r); padding:18px; box-shadow:var(--shadow-xs);
+      transition:all var(--transition); position:relative; overflow:hidden;
+    }
+    .how-card:hover { transform:translateY(-3px); box-shadow:var(--shadow-md); border-color:var(--indigo); }
+    .how-num {
+      width:32px; height:32px; border-radius:9px;
+      background:var(--grad); color:#fff;
+      display:flex; align-items:center; justify-content:center;
+      font-size:14px; font-weight:800; margin-bottom:12px;
+      box-shadow:0 3px 10px rgba(79,70,229,.28);
+    }
+    .how-card h3 { font-size:13px; font-weight:700; margin-bottom:6px; color:var(--txt1); }
+    .how-card p { font-size:12px; color:var(--txt3); line-height:1.6; }
+    .how-tip {
+      margin-top:10px; padding:8px 11px;
+      background:var(--bg2); border-left:3px solid var(--indigo);
+      border-radius:0 var(--r-x) var(--r-x) 0;
+      font-size:11px; color:var(--txt2); line-height:1.5;
+    }
+
+    /* ===== TABLE ===== */
+    .tbl-wrap {
+      overflow-x:auto;
+      overflow-y:visible;
+      -webkit-overflow-scrolling:touch;
+      border-radius:0;
+    }
+    .tbl-wrap::-webkit-scrollbar { height:5px; }
+    .tbl-wrap::-webkit-scrollbar-thumb { background:var(--indigo); border-radius:5px; }
+    table { width:100%; min-width:620px; border-collapse:collapse; font-size:13px; }
+    thead tr { background:var(--bg2); }
+    th {
+      padding:11px 16px; text-align:left;
+      font-size:11px; font-weight:700; color:var(--txt3);
+      text-transform:uppercase; letter-spacing:.7px;
+      border-bottom:1px solid var(--border); white-space:nowrap;
+    }
+    td { padding:13px 16px; border-bottom:1px solid var(--bg2); color:var(--txt2); vertical-align:middle; }
+    tr:last-child td { border-bottom:none; }
+    tbody tr { transition:background var(--transition); }
+    tbody tr:hover { background:var(--bg); }
+
+    .user-cell { display:flex; align-items:center; gap:9px; }
+    .user-av {
+      width:30px; height:30px; border-radius:50%; flex-shrink:0;
+      display:flex; align-items:center; justify-content:center;
+      font-size:11px; font-weight:800; color:#fff;
+      box-shadow:var(--shadow-xs);
+    }
+    .user-name { font-size:13px; font-weight:600; color:var(--txt1); }
+
+    /* ===== BADGES ===== */
+    .badge {
+      display:inline-flex; align-items:center; gap:5px;
+      padding:3px 10px; border-radius:var(--r-p);
+      font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; white-space:nowrap;
+    }
+    .badge-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+    .badge-delivered { background:var(--green-bg); color:var(--green); border:1px solid var(--green-b); }
+    .badge-delivered .badge-dot { background:var(--green); }
+    .badge-pending    { background:var(--blue-bg);   color:var(--blue);   border:1px solid var(--blue-b); }
+    .badge-pending .badge-dot { background:var(--blue); }
+    .badge-sent_to_api{ background:var(--amber-bg);  color:var(--amber);  border:1px solid var(--amber-b); }
+    .badge-sent_to_api .badge-dot { background:var(--amber); animation:pulse 1.5s infinite; }
+    .badge-failed     { background:var(--red-bg);    color:var(--red);    border:1px solid var(--red-b); }
+    .badge-failed .badge-dot { background:var(--red); }
+    .badge-cancelled  { background:var(--bg3); color:var(--txt3); border:1px solid var(--border); }
+    .badge-cancelled .badge-dot { background:var(--txt4); }
+
+    /* ===== TERMINAL ===== */
+    .term-header {
+      background:#1E2130; padding:8px 14px;
+      display:flex; align-items:center; gap:6px;
+    }
+    .term-btn { width:11px; height:11px; border-radius:50%; }
+    .term-label { font-size:11px; color:#6B7280; font-family:'JetBrains Mono',monospace; margin-left:6px; }
+    .terminal {
+      background:#0D1117; padding:12px 16px;
+      height:165px; overflow-y:auto;
+      font-family:'JetBrains Mono',monospace; font-size:12px;
+      display:flex; flex-direction:column; gap:4px;
+    }
+    .terminal::-webkit-scrollbar { width:4px; }
+    .terminal::-webkit-scrollbar-thumb { background:#1E2130; }
+    .log-line { line-height:1.65; word-break:break-all; }
+    .log-ts   { color:#3D4F6B; margin-right:8px; }
+    .log-info { color:#58A6FF; }
+    .log-ok   { color:#3FB950; }
+    .log-warn { color:#D29922; }
+    .log-err  { color:#F85149; }
+    .log-sys  { color:#A78BFA; }
+
+    /* ===== TEAM STRIP ===== */
+    .team-bar {
+      background:var(--white); border:1px solid var(--border);
+      border-radius:var(--r); padding:14px 18px; margin-bottom:20px;
+      display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+      box-shadow:var(--shadow-xs);
+    }
+    .team-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--txt4); white-space:nowrap; }
+    .avatars { display:flex; align-items:center; }
+    .av {
+      width:32px; height:32px; border-radius:50%;
+      border:2px solid var(--white); margin-left:-8px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:11px; font-weight:800; color:#fff;
+      box-shadow:0 1px 4px rgba(0,0,0,.12);
+      cursor:default; position:relative;
+      transition:transform var(--transition);
+    }
+    .av:first-child { margin-left:0; }
+    .av:hover { transform:translateY(-3px) scale(1.1); z-index:10; }
+    .av-tip {
+      position:absolute; bottom:-28px; left:50%; transform:translateX(-50%);
+      background:var(--txt1); color:#fff; font-size:10px; font-weight:600;
+      padding:3px 8px; border-radius:5px; white-space:nowrap;
+      opacity:0; pointer-events:none; transition:opacity var(--transition); z-index:20;
+    }
+    .av:hover .av-tip { opacity:1; }
+    .team-right { margin-left:auto; font-size:12px; color:var(--txt3); }
+    .team-right strong { color:var(--txt1); }
+
+    /* ===== SECTION HEADER ===== */
+    .section-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+    .section-head h2 { font-size:15px; font-weight:800; color:var(--txt1); }
+    .section-head p { font-size:12px; color:var(--txt3); margin-top:2px; }
+    .section-badge { font-size:11px; font-weight:700; padding:3px 10px; border-radius:var(--r-p); background:var(--purple-bg); color:var(--purple); border:1px solid var(--purple-b); }
+
+    /* ===== TOAST ===== */
+    #toast {
+      position:fixed; bottom:24px; right:24px; z-index:9999;
+      padding:12px 20px; border-radius:12px;
+      background:var(--txt1); color:#fff; font-size:13px; font-weight:600;
+      box-shadow:0 8px 28px rgba(0,0,0,.18);
+      display:none; animation:toastup .25s cubic-bezier(.34,1.56,.64,1);
+    }
+    @keyframes toastup { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
+    .spin { display:inline-block; width:13px; height:13px; border:2px solid rgba(255,255,255,.25); border-top-color:#fff; border-radius:50%; animation:spin .6s linear infinite; }
+    @keyframes spin { to{transform:rotate(360deg)} }
+    .empty-cell { text-align:center; padding:40px; color:var(--txt4); font-size:13px; }
+
+    /* ===== SVG ICON HELPERS ===== */
+    .icon { display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
+
+    @media(max-width:768px) {
+      .sidebar { display:none; }
+      .sim-grid { grid-template-columns:1fr; }
+      .how-grid { grid-template-columns:1fr 1fr; }
+      th:nth-child(n+5), td:nth-child(n+5) { display:none; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <img src="/static/logo.jpg" alt="LinkPlease">
+      <div>
+        <div class="sidebar-logo-text">Link<span>Please</span></div>
+        <div class="sidebar-tag">BETA</div>
+      </div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-label">Main</div>
+      <a class="nav-item active" href="#dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </a>
+      <a class="nav-item" href="#guide">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        How to Use
+      </a>
+      <a class="nav-item" href="#rules">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        Rules
+      </a>
+      <a class="nav-item" href="#simulator">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Simulator
+      </a>
+      <a class="nav-item" href="#activity">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Activity
+      </a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-label">More</div>
+      <a class="nav-item" href="/docs" target="_blank">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        API Docs
+      </a>
+    </div>
+
+    <div class="sidebar-bottom">
+      <div class="status-row">
+        <div class="status-dot"></div>
+        <span class="status-txt">Engine Running</span>
+      </div>
+      <div style="font-size:11px;color:var(--txt4);margin-top:10px;padding:0 2px;">
+        Built by <strong style="color:var(--txt2)">Balaji Narra</strong><br>
+        LinkPlease Intern Assignment
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN ===== -->
+  <div class="main">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <h1>DM Automation Dashboard</h1>
+        <p>Keyword-triggered Instagram DMs — backed by SQLite</p>
+      </div>
+      <div class="topbar-right">
+        <span class="refresh-label" id="refresh-ts">Syncing...</span>
+        <a class="btn-api" href="/docs" target="_blank">API Docs</a>
+      </div>
+    </div>
+
+    <div class="content" id="dashboard">
+
+      <!-- HOW TO USE -->
+      <div id="guide" style="margin-bottom:22px;">
+        <div class="section-head">
+          <div>
+            <h2>How to Use LinkPlease</h2>
+            <p>Follow these steps to automate your Instagram DMs</p>
+          </div>
+          <span class="section-badge">QUICK START</span>
+        </div>
+        <div class="how-grid">
+          <div class="how-card">
+            <div class="how-num">1</div>
+            <h3>Create a Keyword Rule</h3>
+            <p>Type a trigger keyword such as PRICE or LINK, then write the DM message to auto-send.</p>
+            <div class="how-tip">Keywords match anywhere in the comment text, case-insensitive.</div>
+          </div>
+          <div class="how-card">
+            <div class="how-num">2</div>
+            <h3>Simulate a Comment</h3>
+            <p>Use the Webhook Simulator to fire test events. Click "New Comment Match" to trigger the rule.</p>
+            <div class="how-tip">Try "Same User Again" to see the idempotency guard in action.</div>
+          </div>
+          <div class="how-card">
+            <div class="how-num">3</div>
+            <h3>Watch the DM Queue</h3>
+            <p>The Activity Feed updates live. Jobs move from Pending to In Flight to Delivered.</p>
+            <div class="how-tip">The reconciler polls for delayed failures and retries automatically.</div>
+          </div>
+          <div class="how-card">
+            <div class="how-num">4</div>
+            <h3>Monitor Live Stats</h3>
+            <p>The stat cards show real-time counts from SQLite refreshing every 3 seconds.</p>
+            <div class="how-tip">Visit /docs for the full REST API reference with Swagger UI.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TEAM BAR -->
+      <div class="team-bar">
+        <span class="team-label">Creators</span>
+        <div class="avatars">
+          <div class="av" style="background:linear-gradient(135deg,#4F46E5,#7C3AED)">PR<div class="av-tip">Priya Raghunathan</div></div>
+          <div class="av" style="background:linear-gradient(135deg,#DC2626,#F87171)">AK<div class="av-tip">Arjun Krishnamurthy</div></div>
+          <div class="av" style="background:linear-gradient(135deg,#059669,#34D399)">DS<div class="av-tip">Divya Subramaniam</div></div>
+          <div class="av" style="background:linear-gradient(135deg,#D97706,#FBBF24)">RN<div class="av-tip">Rohit Nambiar</div></div>
+          <div class="av" style="background:linear-gradient(135deg,#2563EB,#60A5FA)">KV<div class="av-tip">Kavya Venkataraman</div></div>
+          <div class="av" style="background:linear-gradient(135deg,#DB2777,#F9A8D4)">SB<div class="av-tip">Siddharth Balasubramanian</div></div>
+          <div class="av" style="background:linear-gradient(135deg,#0D9488,#5EEAD4)">NM<div class="av-tip">Neha Muthukrishnan</div></div>
+        </div>
+        <div class="team-right">Project: <strong>LinkPlease Intern Assignment</strong> &mdash; <strong>Balaji Narra</strong></div>
+      </div>
+
+      <!-- STATS -->
+      <div class="section-head" id="stats-head">
+        <h2>Live Delivery Stats</h2>
+      </div>
+      <div class="stats-grid" style="margin-bottom:22px;">
+        <div class="stat-card sc-green">
+          <div class="stat-header">
+            <span class="stat-label">Delivered</span>
+            <div class="stat-icon-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+          </div>
+          <div class="stat-value" id="s-sent">-</div>
+          <div class="stat-desc">Confirmed by PseudoGram</div>
+          <div class="stat-bar"><div class="stat-bar-fill" id="bar-sent" style="width:0%"></div></div>
+        </div>
+        <div class="stat-card sc-amber">
+          <div class="stat-header">
+            <span class="stat-label">In-Flight</span>
+            <div class="stat-icon-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+          </div>
+          <div class="stat-value" id="s-queued">-</div>
+          <div class="stat-desc">Queued or rate-limited</div>
+          <div class="stat-bar"><div class="stat-bar-fill" id="bar-queued" style="width:0%"></div></div>
+        </div>
+        <div class="stat-card sc-purple">
+          <div class="stat-header">
+            <span class="stat-label">Blocked</span>
+            <div class="stat-icon-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+            </div>
+          </div>
+          <div class="stat-value" id="s-dupes">-</div>
+          <div class="stat-desc">Idempotency protection</div>
+          <div class="stat-bar"><div class="stat-bar-fill" id="bar-dupes" style="width:0%"></div></div>
+        </div>
+        <div class="stat-card sc-red">
+          <div class="stat-header">
+            <span class="stat-label">Failed</span>
+            <div class="stat-icon-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            </div>
+          </div>
+          <div class="stat-value" id="s-failed">-</div>
+          <div class="stat-desc">Retries exhausted</div>
+          <div class="stat-bar"><div class="stat-bar-fill" id="bar-failed" style="width:0%"></div></div>
+        </div>
+      </div>
+
+      <!-- WORK GRID -->
+      <div class="work-grid">
+
+        <!-- LEFT -->
+        <div>
+          <!-- Rules -->
+          <div class="card" id="rules">
+            <div class="card-head">
+              <div class="card-title">
+                <div class="card-icon-wrap">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                </div>
+                Keyword Rules
+              </div>
+              <button class="btn btn-ghost" onclick="loadRules()">Refresh</button>
+            </div>
+            <div class="card-body">
+              <form id="rule-form" autocomplete="off">
+                <div class="field">
+                  <label>Trigger Keyword</label>
+                  <input id="kw" type="text" placeholder="e.g. PRICE, OFFER, LINK" required>
+                </div>
+                <div class="field">
+                  <label>Auto DM Message</label>
+                  <textarea id="msg" rows="3" placeholder="Hey! Here is our price list: Starter Rs.999/mo, Pro Rs.2499/mo..." required></textarea>
+                </div>
+                <button id="create-btn" class="btn btn-primary btn-full" type="submit">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  Create Rule
+                </button>
+              </form>
+              <div class="divider"><hr><span>Active Rules</span><hr></div>
+              <div class="rules-list" id="rules-list">
+                <div class="rule-empty" id="rules-empty">Loading rules...</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Simulator -->
+          <div class="card" id="simulator">
+            <div class="card-head">
+              <div class="card-title">
+                <div class="card-icon-wrap">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                </div>
+                Webhook Simulator
+              </div>
+            </div>
+            <div class="card-body">
+              <p style="font-size:12px;color:var(--txt3);margin-bottom:14px;">Test all 4 engine scenarios using real Indian creator names</p>
+              <div class="sim-grid">
+                <button class="sim-btn" onclick="sim('match')">
+                  <div class="sim-btn-title">New Comment Match</div>
+                  <div class="sim-btn-desc">Priya comments the keyword, DM gets queued automatically</div>
+                </button>
+                <button class="sim-btn" onclick="sim('dup_user')">
+                  <div class="sim-btn-title">Same User Again</div>
+                  <div class="sim-btn-desc">Priya comments again, idempotency guard blocks duplicate DM</div>
+                </button>
+                <button class="sim-btn" onclick="sim('dup_event')">
+                  <div class="sim-btn-title">Re-delivered Event</div>
+                  <div class="sim-btn-desc">Same event_id received again, engine deduplicates it instantly</div>
+                </button>
+                <button class="sim-btn" onclick="sim('delete')">
+                  <div class="sim-btn-title">Comment Deleted</div>
+                  <div class="sim-btn-desc">Comment removed, pending DM job gets cancelled via tombstone</div>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Activity Feed -->
+        <div class="card" id="activity" style="min-height:580px;display:flex;flex-direction:column;">
+          <div class="card-head">
+            <div class="card-title">
+              <div class="card-icon-wrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              </div>
+              DM Job Activity Feed
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span id="jobs-count" style="font-size:12px;color:var(--txt4);"></span>
+              <button class="btn btn-ghost" onclick="loadJobs()">Refresh</button>
+            </div>
+          </div>
+          <div class="tbl-wrap" style="flex:1;">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Creator / Fan</th>
+                  <th>Status</th>
+                  <th>Attempts</th>
+                  <th>DM ID</th>
+                  <th>Updated</th>
+                </tr>
+              </thead>
+              <tbody id="jobs-tbody">
+                <tr><td colspan="6" class="empty-cell">No DM jobs yet. Create a rule and use the simulator.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div>
+            <div class="term-header">
+              <div class="term-btn" style="background:#FF5F57;"></div>
+              <div class="term-btn" style="background:#FEBC2E;"></div>
+              <div class="term-btn" style="background:#28C840;"></div>
+              <span class="term-label">linkplease engine log</span>
+            </div>
+            <div class="terminal" id="terminal">
+              <div class="log-line log-sys"><span class="log-ts">[system]</span> LinkPlease dashboard ready. Polling SQLite every 3 seconds.</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+var lastEventId = null, lastUserId = null, userIdx = 0;
+var users = [
+  {id:'usr_priya_01',   name:'Priya Raghunathan',          un:'priya.creates',    c:'linear-gradient(135deg,#4F46E5,#7C3AED)'},
+  {id:'usr_arjun_02',   name:'Arjun Krishnamurthy',        un:'arjun_insta',      c:'linear-gradient(135deg,#DC2626,#F87171)'},
+  {id:'usr_divya_03',   name:'Divya Subramaniam',          un:'divya.s.official', c:'linear-gradient(135deg,#059669,#34D399)'},
+  {id:'usr_rohit_04',   name:'Rohit Nambiar',              un:'rohit_nambiar',    c:'linear-gradient(135deg,#D97706,#FBBF24)'},
+  {id:'usr_kavya_05',   name:'Kavya Venkataraman',         un:'kavya.v',          c:'linear-gradient(135deg,#2563EB,#60A5FA)'},
+  {id:'usr_sid_06',     name:'Siddharth Balasubramanian',  un:'siddharth_b',      c:'linear-gradient(135deg,#DB2777,#F9A8D4)'},
+  {id:'usr_neha_07',    name:'Neha Muthukrishnan',         un:'neha.m.creates',   c:'linear-gradient(135deg,#0D9488,#5EEAD4)'},
+  {id:'usr_aditya_08',  name:'Aditya Pillai',              un:'aditya_pillai',    c:'linear-gradient(135deg,#7C3AED,#C4B5FD)'},
+  {id:'usr_sneha_09',   name:'Sneha Iyer',                 un:'sneha.iyer.ig',    c:'linear-gradient(135deg,#D97706,#FB923C)'},
+  {id:'usr_vikram_10',  name:'Vikram Rajan',               un:'vikram.rajan',     c:'linear-gradient(135deg,#4F46E5,#DC2626)'},
+];
+
+function getUser(i){ return users[i % users.length]; }
+function initials(n){ return n.split(' ').map(function(w){return w[0];}).slice(0,2).join(''); }
+
+function log(msg, type){
+  type = type || 'info';
+  var t = document.getElementById('terminal');
+  var ts = new Date().toLocaleTimeString('en-IN', {hour12:true});
+  var el = document.createElement('div');
+  el.className = 'log-line log-' + type;
+  el.innerHTML = '<span class="log-ts">[' + ts + ']</span> ' + msg;
+  t.appendChild(el); t.scrollTop = t.scrollHeight;
+}
+
+function toast(msg){
+  var el = document.getElementById('toast');
+  el.textContent = msg; el.style.display = 'block';
+  clearTimeout(el._t);
+  el._t = setTimeout(function(){ el.style.display = 'none'; }, 3000);
+}
+
+function fmt(n){ return String(n || 0).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+
+function rel(ts){
+  if (!ts) return '-';
+  var d = new Date(ts * 1000);
+  var s = Math.floor((Date.now() - d) / 1000);
+  if (s < 5) return 'just now';
+  if (s < 60) return s + 's ago';
+  if (s < 3600) return Math.floor(s / 60) + 'm ago';
+  return d.toLocaleTimeString('en-IN', {hour12:true});
+}
+
+function badgify(s){
+  var L = {delivered:'Delivered', pending:'Pending', sent_to_api:'In Flight', failed:'Failed', cancelled:'Cancelled'};
+  return '<span class="badge badge-' + s + '"><span class="badge-dot"></span>' + (L[s] || s) + '</span>';
+}
+
+function esc(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function fetchStats(){
+  try {
+    var r = await fetch('/stats'); if (!r.ok) return;
+    var d = await r.json();
+    var tot = (d.sent||0) + (d.queued||0) + (d.duplicates_blocked||0) + (d.failed||0) || 1;
+    [
+      {id:'s-sent',   bar:'bar-sent',   v:d.sent,               p:d.sent/tot},
+      {id:'s-queued', bar:'bar-queued', v:d.queued,             p:d.queued/tot},
+      {id:'s-dupes',  bar:'bar-dupes',  v:d.duplicates_blocked, p:d.duplicates_blocked/tot},
+      {id:'s-failed', bar:'bar-failed', v:d.failed,             p:d.failed/tot}
+    ].forEach(function(x){
+      var el = document.getElementById(x.id), b = document.getElementById(x.bar);
+      if (el) el.textContent = fmt(x.v);
+      if (b)  b.style.width  = Math.min(100, (x.p||0) * 100) + '%';
+    });
+    document.getElementById('refresh-ts').textContent = 'Synced ' + new Date().toLocaleTimeString('en-IN',{hour12:true});
+  } catch(e){
+    document.getElementById('refresh-ts').textContent = 'Offline - retrying...';
+  }
+}
+
+async function loadRules(){
+  try {
+    var r = await fetch('/rules'); var rules = await r.json();
+    var list = document.getElementById('rules-list');
+    var empty = document.getElementById('rules-empty');
+    list.querySelectorAll('.rule-item').forEach(function(el){ el.remove(); });
+    if (!rules.length){
+      empty.style.display = '';
+      empty.textContent = 'No rules yet. Create one above.';
+    } else {
+      empty.style.display = 'none';
+      rules.forEach(function(ru){ addRuleRow(ru, list); });
+    }
+  } catch(e){ log('Failed to load rules: ' + e, 'err'); }
+}
+
+function addRuleRow(rule, container){
+  var list = container || document.getElementById('rules-list');
+  var d = document.createElement('div');
+  d.className = 'rule-item';
+  d.innerHTML = '<span class="rule-kw">' + esc(rule.keyword) + '</span>' +
+    '<span class="rule-msg" title="' + esc(rule.dm_message) + '">' + esc(rule.dm_message) + '</span>';
+  list.prepend(d);
+}
+
+document.getElementById('rule-form').addEventListener('submit', async function(e){
+  e.preventDefault();
+  var kw  = document.getElementById('kw').value.trim();
+  var msg = document.getElementById('msg').value.trim();
+  var btn = document.getElementById('create-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span> Creating...';
+  try {
+    var r = await fetch('/rules', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({keyword:kw, dm_message:msg})
+    });
+    if (r.status === 201){
+      var rule = await r.json();
+      log('Rule created: keyword "' + esc(rule.keyword) + '" saved to SQLite', 'ok');
+      toast('Rule "' + rule.keyword + '" created');
+      document.getElementById('kw').value = '';
+      document.getElementById('msg').value = '';
+      document.getElementById('rules-empty').style.display = 'none';
+      addRuleRow(rule);
+    } else {
+      var err = await r.json().catch(function(){ return {}; });
+      log('Failed to create rule: ' + (err.detail || r.statusText), 'err');
+      toast('Error: ' + (err.detail || r.statusText));
+    }
+  } catch(err){ log('Network error: ' + err, 'err'); }
+  finally {
+    btn.disabled = false;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Create Rule';
+  }
+});
+
+async function loadJobs(){
+  try {
+    var r = await fetch('/dm-jobs?limit=50'); var jobs = await r.json();
+    var tbody = document.getElementById('jobs-tbody');
+    var cnt = document.getElementById('jobs-count');
+    if (!jobs.length){
+      tbody.innerHTML = '<tr><td colspan="6" class="empty-cell">No DM jobs yet. Create a rule and click a simulator button.</td></tr>';
+      cnt.textContent = ''; return;
+    }
+    cnt.textContent = jobs.length + (jobs.length === 1 ? ' job' : ' jobs');
+    tbody.innerHTML = jobs.map(function(j){
+      var u = users.filter(function(n){ return n.id === j.recipient_user_id; })[0];
+      var name  = u ? u.name : j.recipient_user_id;
+      var color = u ? u.c : 'linear-gradient(135deg,#4F46E5,#7C3AED)';
+      var ini   = u ? initials(u.name) : '?';
+      return '<tr>' +
+        '<td class="mono" style="color:var(--txt4);font-size:12px">' + j.id + '</td>' +
+        '<td><div class="user-cell"><div class="user-av" style="background:' + color + '">' + ini + '</div>' +
+        '<span class="user-name">' + esc(name) + '</span></div></td>' +
+        '<td>' + badgify(j.status) + '</td>' +
+        '<td style="font-size:13px;color:' + (j.attempts >= j.max_attempts ? 'var(--red)' : 'var(--txt2)') + '">' +
+        j.attempts + '/' + j.max_attempts + '</td>' +
+        '<td class="mono" style="color:var(--txt4);font-size:11px">' + (j.dm_id ? esc(j.dm_id) : '-') + '</td>' +
+        '<td style="color:var(--txt4);font-size:12px">' + rel(j.updated_at) + '</td>' +
+        '</tr>';
+    }).join('');
+  } catch(e){ log('Failed to load jobs: ' + e, 'err'); }
+}
+
+async function sim(type){
+  var u = getUser(userIdx); userIdx++;
+  var commentId = 'cmt_' + Date.now();
+  var eventId   = 'evt_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+  var payload, desc;
+
+  if (type === 'match'){
+    lastEventId = eventId; lastUserId = u.id;
+    desc = u.name + ' comments: "What is the PRICE?"';
+    payload = {
+      event_id: eventId, event_type: 'comment.created',
+      sent_at: new Date().toISOString(),
+      data: {
+        comment_id: commentId, post_id: 'post_lp_001',
+        text: 'Hey! What is the PRICE for your premium package?',
+        created_at: new Date().toISOString(),
+        from: { user_id: u.id, username: u.un }
+      }
+    };
+  } else if (type === 'dup_user'){
+    if (!lastUserId){ toast('Click "New Comment Match" first'); return; }
+    var du = users.filter(function(n){ return n.id === lastUserId; })[0] || users[0];
+    desc = du.name + ' comments again - idempotency guard blocks duplicate DM';
+    payload = {
+      event_id: 'evt_dup_' + Date.now(), event_type: 'comment.created',
+      sent_at: new Date().toISOString(),
+      data: {
+        comment_id: 'cmt_dup_' + Date.now(), post_id: 'post_lp_001',
+        text: 'PRICE please! I really want to know!',
+        created_at: new Date().toISOString(),
+        from: { user_id: lastUserId, username: du.un }
+      }
+    };
+  } else if (type === 'dup_event'){
+    if (!lastEventId){ toast('Click "New Comment Match" first'); return; }
+    desc = 'PseudoGram re-delivers same event_id - engine deduplicates it';
+    payload = {
+      event_id: lastEventId, event_type: 'comment.created',
+      sent_at: new Date().toISOString(),
+      data: {
+        comment_id: commentId, post_id: 'post_lp_001',
+        text: 'PRICE?',
+        created_at: new Date().toISOString(),
+        from: { user_id: u.id, username: u.un }
+      }
+    };
+  } else if (type === 'delete'){
+    desc = u.name + ' deletes comment - pending DM job cancelled';
+    payload = {
+      event_id: eventId, event_type: 'comment.deleted',
+      data: { comment_id: commentId }
+    };
+  }
+
+  log('POST /webhook  ' + desc, 'info');
+  try {
+    var r = await fetch('/webhook', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    var d = await r.json();
+    var ok = d.status && !d.status.includes('invalid');
+    log('200 OK  ' + JSON.stringify(d), ok ? 'ok' : 'warn');
+    toast(desc.split(' - ')[0]);
+    setTimeout(function(){ fetchStats(); loadJobs(); }, 500);
+  } catch(err){ log('Error: ' + err, 'err'); }
+}
+
+function poll(){ fetchStats(); loadJobs(); }
+poll(); loadRules(); setInterval(poll, 3000);
+
+// Clock
+function updateClock(){
+  var el = document.getElementById('refresh-ts');
+  if (el && el.textContent === 'Syncing...'){
+    el.textContent = new Date().toLocaleTimeString('en-IN',{hour12:true});
+  }
+}
+setInterval(updateClock, 1000);
+
+// Sidebar nav highlight
+document.querySelectorAll('.nav-item').forEach(function(item){
+  item.addEventListener('click', function(){
+    document.querySelectorAll('.nav-item').forEach(function(x){ x.classList.remove('active'); });
+    item.classList.add('active');
+  });
+});
+</script>
+</body>
+</html>

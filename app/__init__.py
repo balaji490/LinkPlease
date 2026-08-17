@@ -1,0 +1,1 @@
+"""LinkPlease application package."""
