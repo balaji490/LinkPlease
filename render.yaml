@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: linkplease
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: DATABASE_PATH
+        value: linkplease.db
+      - key: PSEUDOGRAM_BASE_URL
+        value: https://pseudogram-api.onrender.com
+      - key: PSEUDOGRAM_API_KEY
+        sync: false

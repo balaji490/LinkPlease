@@ -51,8 +51,3 @@ htmlcov/
 # OS files
 .DS_Store
 Thumbs.db
-
-# Generated static image assets (large binary files)
-app/static/*.jpg
-app/static/*.png
-app/static/*.webp
